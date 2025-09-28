@@ -67,14 +67,43 @@ La arquitectura propuesta sería:
 - El ~20% de casos complejos (empatía/criterio) debe escalar a un agente humano.
 
 ### Riesgos éticos y mitigaciones
-- Alucinaciones:
-  - Mitigación: respuestas ancladas a la API/BD; plantillas con "No encontrado"; umbrales de confianza y escalamiento automático.
-- Sesgo:
-  - Mitigación: pruebas de equidad periódicas; revisión humana de muestras; ajuste de prompts/datos para reducir sesgos.
-- Privacidad de datos:
-  - Mitigación: minimización de PII en prompts; anonimización para entrenamiento; cifrado en tránsito/en reposo; control de accesos y retención limitada.
-- Impacto laboral:
-  - Mitigación: protocolo de escalamiento claro; capacitación de agentes para enfocarse en el 20% complejo; medición de carga para dimensionamiento del equipo.
+
+- Alucinaciones
+  - Qué puede generar: respuestas inventadas sobre estados de pedido, políticas o características de productos; confirmaciones falsas; enlaces o números de seguimiento inexistentes.
+  - Impacto de negocio: caída de CSAT/NPS, reclamos y reembolsos no planificados, pérdida de confianza de marca, riesgo legal por promesas incumplidas.
+  - Mitigaciones:
+    - Respuestas ancladas a fuentes: obligar llamadas a API/BD (RAG o funciones) y operar en modo "closed-book" cuando se requieran datos transaccionales.
+    - Validaciones sintácticas y de negocio: esquemas de respuesta, campos obligatorios (estado, ETA, tracking). Si falta información: responder "No encontrado" y pedir verificación.
+    - Umbrales de confianza y fallback: si la detección de intención/entidad tiene baja confianza, solicitar aclaración o escalar a humano.
+    - Plantillas controladas para políticas y mensajes sensibles; versionado de políticas y controles de cambios.
+    - Monitoreo: logging de fuentes consultadas, muestreo QA semanal, KPI de tasa de alucinación y acciones correctivas.
+
+- Sesgo
+  - Qué puede generar: trato desigual por idioma, región o perfil; variaciones injustificadas de tono/prioridad; recomendaciones desbalanceadas.
+  - Impacto de negocio: daño reputacional, riesgo regulatorio, pérdida de clientes y percepción de discriminación.
+  - Mitigaciones:
+    - Curaduría y balance de datos de entrenamiento/contexto; guías de estilo inclusivas en prompts.
+    - Pruebas de equidad pre y post despliegue (cohortes por idioma/segmento), con métricas de paridad y revisión de outliers.
+    - Reglas de seguridad de contenido y filtros para lenguaje discriminatorio; ajuste de temperatura/top_p para reducir variabilidad indeseada.
+    - Proceso de apelación: permitir que clientes y agentes reporten incidentes; registro y remediación con reentrenamiento/ajuste de prompts.
+
+- Privacidad de datos
+  - Qué puede generar: exposición de PII (direcciones, emails, historial), retención indebida de datos sensibles o uso no autorizado para entrenamiento.
+  - Impacto de negocio: multas y sanciones (cumplimiento), incidentes de seguridad, pérdida de confianza y costos legales.
+  - Mitigaciones:
+    - Minimización de datos: enviar solo los campos necesarios; enmascaramiento/tokenización; scrubbing de PII en logs.
+    - Seguridad: cifrado en tránsito (TLS) y en reposo; controles de acceso (RBAC), segregación de entornos y principios de menor privilegio.
+    - Gobernanza: políticas de retención y borrado; acuerdos de procesamiento de datos (DPA); evitar que el proveedor use los datos para entrenamiento por defecto.
+    - Monitoreo y auditoría: DLP, alertas de exfiltración, auditorías periódicas y pruebas de penetración del flujo de soporte.
+
+- Impacto laboral
+  - Qué puede generar: resistencia al cambio, ansiedad por reemplazo, deterioro de calidad si no hay escalamiento oportuno; pérdida de conocimiento tácito.
+  - Impacto de negocio: rotación de personal, caída de calidad en el 20% complejo, afectación de CSAT y demoras en resolución de casos críticos.
+  - Mitigaciones:
+    - Human-in-the-loop: umbrales claros de escalamiento (intención/confianza), colas priorizadas y SLAs para casos complejos.
+    - Capacitación y upskilling: entrenamiento en uso del sistema, nuevas funciones y protocolos; reconocimiento e incentivos.
+    - Despliegue gradual y codiseño con agentes: pilotos controlados, feedback continuo y ajustes antes de escalar.
+    - Medición continua: métricas de carga humana, calidad de resolución de casos complejos y encuestas de clima para decisiones de mejora.
 
 # Fase 3: Ingeniería de Prompts
 
