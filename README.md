@@ -2,7 +2,7 @@ Taller práctico 1
 
 # Integrantes:
 - Joshua Triana
-- Andres Borrera
+- Andrés Borrero
 
 # Fase 1: Selección y Justificación del Modelo de IA para EcoMarket
 
@@ -14,27 +14,23 @@ Solución híbrida con un LLM GPT-4 afinado con datos de EcoMarket, conectado a 
 
 Se elige GPT-4 porque:
 
-- Impacto en indicadores del negocio:
-  - Tiempo de respuesta: de ~24h a segundos/minutos en el ~80% de solicitudes recurrentes (estado de pedido, devoluciones, políticas).
-  - CSAT/NPS: lenguaje natural, empático y consistente mejora la percepción del servicio.
-  - FCR: mayor resolución al primer contacto al estar conectado a datos de pedido y políticas vigentes.
-- Calidad y control:
-  - Comprensión multietapa y seguimiento de instrucciones, útil para verificar datos, aplicar políticas y guiar pasos al cliente.
-  - Anclaje a datos internos: restringe respuestas a información de la API/BD y reconoce “No encontrado”.
-  - Configurable por prompts y, si se requiere, fine-tuning para tono y guías específicas de EcoMarket.
-- Operación y escalabilidad:
-  - Manejo de picos estacionales sin infraestructura local; despliegue vía API.
-  - Latencia estable y soporte multicanal (chat web, email, redes sociales).
-- Cumplimiento y seguridad:
-  - Minimización de PII y trazabilidad de interacciones; compatible con anonimización y controles de acceso.
+- **Precisión en respuestas específicas:** GPT-4 puede manejar consultas complejas y brindar respuestas precisas cuando está afinado con datos específicos de la empresa, como el estado del pedido y políticas de devoluciones.
 
-Comparación con alternativas:
+- **Fluidez y naturalidad:** GPT-4 genera respuestas naturales, empáticas y coherentes, mejorando la experiencia del usuario en interacciones tanto simples como complejas.
 
-- Modelos pequeños o específicos (BERT, DistilBERT, clasificadores): excelentes en clasificación/extracción y FAQs cerradas; menos aptos para conversación abierta y generación contextual.
-- Modelos anteriores como GPT-3.5: menor rendimiento en instrucciones complejas, razonamiento multietapa y manejo de excepciones; requiere más reintentos y ajustes de redacción.
-- Modelos open source de tamaño medio (7B–13B): viables si se prioriza control on‑prem; demandan más orquestación, seguridad y ajuste para igualar la calidad conversacional; mayor esfuerzo inicial (infra/MLOps).
-- Versiones muy recientes o experimentales: riesgo de madurez y variabilidad de comportamiento; no recomendadas para la primera versión productiva.
-- Otros proveedores: alternativas válidas; la elección final depende de pruebas de latencia, costo por conversación, calidad en español e integración. Esta propuesta prioriza menor riesgo y tiempo de salida.
+- **Escalabilidad y adaptabilidad:** Puede ajustarse mediante fine-tuning o mediante prompts especializados, permitiendo ampliar o disminuir su alcance según necesidades.
+
+- **Versatilidad:** Es capaz de atender tanto consultas repetitivas como temas más específicos que requieren mayor comprensión contextual.
+
+**Comparación con otros modelos:**
+
+- Modelos pequeños o específicos (BERT, DistilBERT, etc): Son más eficientes en tareas concretas y suelen ser menos costosos, pero no generan respuestas en lenguaje natural tan fluido como GPT-4.
+
+- Modelos anteriores como GPT-3.5: GPT-4 presenta mejoras en comprensión, generación de texto más coherente y manejo de instrucciones complejas.
+
+- Modelos posteriores como GPT-5: Utilizar esta versión en la fase primitiva en la que se encuentra sería riesgoso, ya que aún le falta maduración.
+
+- Otros modelos (Gemini, DeepSeek, etc): Han sido menos probados en el entorno empresarial cuando se compara con GPT.
 
 ### 3. ¿Cuál sería la arquitectura propuesta?
 
