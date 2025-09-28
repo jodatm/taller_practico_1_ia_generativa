@@ -14,31 +14,33 @@ Solución híbrida con un LLM GPT-4 afinado con datos de EcoMarket, conectado a 
 
 Se elige GPT-4 porque:
 
-- **Precisión en respuestas específicas:** GPT-4 puede manejar consultas complejas y brindar respuestas precisas cuando está afinado con datos específicos de la empresa, como el estado del pedido y políticas de devoluciones.
+- Impacto en indicadores del negocio:
+  - Tiempo de respuesta: de ~24h a segundos/minutos en el ~80% de solicitudes recurrentes (estado de pedido, devoluciones, políticas).
+  - CSAT/NPS: lenguaje natural, empático y consistente mejora la percepción del servicio.
+  - FCR: mayor resolución al primer contacto al estar conectado a datos de pedido y políticas vigentes.
+- Calidad y control:
+  - Comprensión multietapa y seguimiento de instrucciones, útil para verificar datos, aplicar políticas y guiar pasos al cliente.
+  - Anclaje a datos internos: restringe respuestas a información de la API/BD y reconoce “No encontrado”.
+  - Configurable por prompts y, si se requiere, fine-tuning para tono y guías específicas de EcoMarket.
+- Operación y escalabilidad:
+  - Manejo de picos estacionales sin infraestructura local; despliegue vía API.
+  - Latencia estable y soporte multicanal (chat web, email, redes sociales).
+- Cumplimiento y seguridad:
+  - Minimización de PII y trazabilidad de interacciones; compatible con anonimización y controles de acceso.
 
-- **Fluidez y naturalidad:** GPT-4 genera respuestas naturales, empáticas y coherentes, mejorando la experiencia del usuario en interacciones tanto simples como complejas.
+Comparación con alternativas:
 
-- **Escalabilidad y adaptabilidad:** Puede ajustarse mediante fine-tuning o mediante prompts especializados, permitiendo ampliar o disminuir su alcance según necesidades.
-
-- **Versatilidad:** Es capaz de atender tanto consultas repetitivas como temas más específicos que requieren mayor comprensión contextual.
-
-**Comparación con otros modelos:**
-
-- Modelos pequeños o específicos (BERT, DistilBERT, etc): Son más eficientes en tareas concretas y suelen ser menos costosos, pero no generan respuestas en lenguaje natural tan fluido como GPT-4.
-
-- Modelos anteriores como GPT-3.5: GPT-4 presenta mejoras en comprensión, generación de texto más coherente y manejo de instrucciones complejas.
-
-- Modelos posteriores como GPT-5: Utilizar esta versión en la fase primitiva en la que se encuentra sería riesgoso, ya que aún le falta maduración.
-
-- Otros modelos (Gemini, DeepSeek, etc): Han sido menos probados en el entorno empresarial cuando se compara con GPT.
+- Modelos pequeños o específicos (BERT, DistilBERT, clasificadores): excelentes en clasificación/extracción y FAQs cerradas; menos aptos para conversación abierta y generación contextual.
+- Modelos anteriores como GPT-3.5: menor rendimiento en instrucciones complejas, razonamiento multietapa y manejo de excepciones; requiere más reintentos y ajustes de redacción.
+- Modelos open source de tamaño medio (7B–13B): viables si se prioriza control on‑prem; demandan más orquestación, seguridad y ajuste para igualar la calidad conversacional; mayor esfuerzo inicial (infra/MLOps).
+- Versiones muy recientes o experimentales: riesgo de madurez y variabilidad de comportamiento; no recomendadas para la primera versión productiva.
+- Otros proveedores: alternativas válidas; la elección final depende de pruebas de latencia, costo por conversación, calidad en español e integración. Esta propuesta prioriza menor riesgo y tiempo de salida.
 
 ### 3. ¿Cuál sería la arquitectura propuesta?
 
-La arquitectura propuesta sería:
-
 - Modelo base: GPT-4, que se complementaría con un proceso de fine-tuning usando datos específicos de EcoMarket.
 
-- Integración con bases de datos: El modelo se conectaría a una API que extracte información en tiempo real desde la base de datos de EcoMarket, como estados de pedido y detalles de productos, permitiendo respuestas precisas y actualizadas.
+- Integración con bases de datos: El modelo se conectaría a una API que extrae información en tiempo real desde la base de datos de EcoMarket, como estados de pedido y detalles de productos, permitiendo respuestas precisas y actualizadas.
 
 - Propósito: Sería un modelo afinado específicamente para EcoMarket, no un modelo de propósito general, para garantizar respuestas alineadas con los procedimientos y tono de la empresa.
 
@@ -107,49 +109,74 @@ La arquitectura propuesta sería:
 
 # Fase 3: Ingeniería de Prompts
 
-### 1) Prompt de estado de pedido
-Objetivo: responder el estado de un pedido con datos del contexto.
+### 1) Prompt de estado de pedido (formato TOML)
+```toml
+[prompts]
+instruction_prompt = """
+Usa el contexto de pedidos en >>>ORDER_CONTEXT<<< y la consulta del usuario en >>>QUERY<<< para responder en español de forma clara y empática.
 
-Rol: actúa como agente de soporte de EcoMarket, claro y empático.
+Sigue estos pasos:
+1) Extrae el tracking_number desde >>>QUERY<<<.
+2) Busca el pedido correspondiente en >>>ORDER_CONTEXT<<< por tracking_number.
+3) Si se encuentra:
+   - Confirma el tracking_number.
+   - Entrega el estado actual y la fecha estimada (ETA).
+   - Si el estado es "Enviado", incluye el enlace de seguimiento:
+     https://tracking.ecomarket.co/track?id={{tracking_number}}
+   - Si hay retraso indicado en el contexto, ofrece una disculpa breve y la causa si está disponible.
+4) Si no se encuentra:
+   - Indica "No encontrado" y solicita verificar el número o los datos del pedido.
 
-Contexto requerido: {order_context} con ≥10 pedidos (tracking_number, cliente, estado, ETA, link_tracking opcional).
+Restricciones:
+- Usa exclusivamente la información presente en >>>ORDER_CONTEXT<<<.
+- No inventes datos; si un campo no está, indica "No disponible".
 
-Reglas/instrucciones:
-- Usa únicamente la información del contexto.
-- Si hay coincidencia por tracking_number: confirma el número, entrega estado y ETA; si "Enviado", incluye link de seguimiento.
-- Si hay retraso: ofrece disculpa breve y causa si existe en el contexto.
-- Si no hay coincidencia: indica "No encontrado" y solicita verificación de datos.
-- No inventes datos ni completes campos ausentes.
+Formato de salida:
+Resumen: <1 frase>
+Estado: <estado>
+Fecha estimada: <YYYY-MM-DD | No disponible>
+Seguimiento: <URL | No aplica>
+Cierre: <frase amable y breve>
+"""
 
-Formato de salida recomendado:
-- Resumen en 1 frase.
-- Detalles: Estado, Fecha estimada, Seguimiento (URL o "No aplica").
-- Cierre amable con oferta de ayuda.
+role_prompt = """
+Eres un agente de soporte de EcoMarket. Responde de forma concisa, clara y empática.
+"""
+```
 
-Consulta ejemplo: "Hola, quiero saber dónde está mi pedido {{tracking_number}}."
+### 2) Prompt de devolución de producto (formato TOML)
+```toml
+[prompts]
+instruction_prompt = """
+Usa las políticas en >>>POLICY<<< y la consulta del cliente en >>>QUERY<<< para guiar el proceso de devolución en español.
 
-### 2) Prompt de devolución de producto
-Objetivo: guiar el proceso de devolución según políticas.
-
-Rol: agente de soporte en devoluciones; tono claro y empático.
-
-Políticas mínimas:
+Política mínima (ejemplo en >>>POLICY<<<):
 - Retornables: ropa, accesorios y hogar dentro de 30 días, sin usar y con etiquetas.
 - No retornables: higiene personal y perecederos.
 
-Reglas/instrucciones:
-- Determina si el producto es retornable según categoría y plazo.
-- Si es retornable: detalla pasos (plazo, estado del producto, etiqueta, canal de envío).
-- Si no es retornable: explica el motivo con empatía y ofrece alternativa razonable (p. ej., descuento futuro).
-- No inventes excepciones a las políticas.
+Sigue estos pasos:
+1) Identifica el producto y su categoría desde >>>QUERY<<<.
+2) Determina si es retornable según >>>POLICY<<< y la fecha de compra si está disponible.
+3) Si ES retornable: indica pasos claros (plazo, estado del producto, generación de etiqueta, canal de envío o punto de entrega).
+4) Si NO es retornable: explica el motivo con empatía y ofrece una alternativa razonable (p. ej., descuento para próxima compra).
 
-Formato de salida recomendado:
-- Decisión: Retornable / No retornable.
-- Pasos (si aplica) o Motivo y Alternativa.
+Restricciones:
+- No inventes excepciones a la política.
+- Si falta información esencial (categoría/fecha), solicita ese dato antes de continuar.
 
-Solicitud ejemplo: "Hola, necesito devolver el artículo {{product_name}} del pedido #{{order_number}}."
+Formato de salida:
+Decisión: <Retornable | No retornable>
+Pasos: <lista numerada | No aplica>
+Motivo: <si no es retornable>
+Alternativa: <si aplica>
+"""
+
+role_prompt = """
+Eres un agente de soporte especializado en devoluciones de EcoMarket. Mantén un tono claro, empático y resolutivo.
+"""
+```
 
 ### Evidencia y datos para pruebas
-- Incluir un documento con ≥10 pedidos para el contexto (por ejemplo, data/pedidos.json).
+- Incluir un documento con ≥10 pedidos para el contexto (por ejemplo, data/pedidos.json) que alimente >>>ORDER_CONTEXT<<<.
 - El repositorio debe contener la estructura mínima para ejecutar los prompts con ese contexto según lo indicado en el taller.
 
