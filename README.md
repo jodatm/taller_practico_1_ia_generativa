@@ -8,49 +8,79 @@ Taller práctico 1
 
 ### 1. ¿Qué tipo de modelo de IA generativa es el más adecuado?
 
-El modelo más adecuado es el GPT-4 ajustado con datos de EcoMarket
+Solución híbrida con un LLM (p. ej., GPT-4) afinado con datos de EcoMarket, conectado a las bases de datos y servicios internos para consultar información de pedidos y productos en tiempo real.
 
 ### 2. ¿Por qué este modelo y no otro?
 
-Se elige GPT-4 porque:
-
-- **Precisión en respuestas específicas:** GPT-4 puede manejar consultas complejas y brindar respuestas precisas cuando está afinado con datos específicos de la empresa, como el estado del pedido y políticas de devoluciones.
-
-- **Fluidez y naturalidad:** GPT-4 genera respuestas naturales, empáticas y coherentes, mejorando la experiencia del usuario en interacciones tanto simples como complejas.
-
-- **Escalabilidad y adaptabilidad:** Puede ajustarse mediante fine-tuning o mediante prompts especializados, permitiendo ampliar o disminuir su alcance según necesidades.
-
-- **Versatilidad:** Es capaz de atender tanto consultas repetitivas como temas más específicos que requieren mayor comprensión contextual.
-
-**Comparación con otros modelos:**
-
-- Modelos pequeños o específicos (BERT, DistilBERT, etc): Son más eficientes en tareas concretas y suelen ser menos costosos, pero no generan respuestas en lenguaje natural tan fluido como GPT-4.
-
-- Modelos anteriores como GPT-3.5: GPT-4 presenta mejoras en comprensión, generación de texto más coherente y manejo de instrucciones complejas.
-
-- Modelos posteriores como GPT-5: Utilizar esta versión en la fase primitiva en la que se encuentra sería riesgoso, ya que aún le falta maduración.
-
-- Otros modelos (Gemini, DeepSeek, etc): Han sido menos probados en el entorno empresarial cuando se compara con GPT.
+- Alineado al caso: automatiza ~80% de consultas repetitivas y reduce el tiempo de respuesta de ~24h a segundos/minutos, manteniendo un tono empático.
+- Comparación breve:
+  - Modelos pequeños (BERT/DistilBERT): óptimos para clasificación/extracción, menos adecuados para respuestas conversacionales completas.
+  - GPT-3.5: menor capacidad para seguir instrucciones complejas y mayor riesgo de errores en consultas con múltiples pasos frente a GPT-4.
 
 ### 3. ¿Cuál sería la arquitectura propuesta?
 
-La arquitectura propuesta sería:
-
-- Modelo base: GPT-4, que se complementaría con un proceso de fine-tuning usando datos específicos de EcoMarket.
-
-- Integración con bases de datos: El modelo se conectaría a una API que extracte información en tiempo real desde la base de datos de EcoMarket, como estados de pedido y detalles de productos, permitiendo respuestas precisas y actualizadas.
-
-- Propósito: Sería un modelo afinado específicamente para EcoMarket, no un modelo de propósito general, para garantizar respuestas alineadas con los procedimientos y tono de la empresa.
-
-- Interfase con canales de contacto: Se implementaría a través de APIs que permitan su uso en chat, email y redes sociales.
+- LLM de generación.
+- Capa de integración (API interna) que consulta BD de pedidos/productos y servicios de tracking en tiempo real.
+- Orquestador y reglas: decide cuándo consultar datos, formatea respuestas y deriva el 20% de casos complejos a un agente humano.
+- Canales: chat web, email y redes sociales mediante una API común.
+- Seguridad y cumplimiento: no enviar PII innecesaria al modelo; registro y monitoreo de interacciones.
 
 ### 4. ¿Cuáles son los criterios que justifican esta elección?
 
-- **Costo:** Aunque GPT-4 tiene costos asociados, su capacidad de integración y la reducción en el tiempo de respuesta justifican la inversión, ya que mejora la satisfacción del cliente y reduce cargas operativas.
+- Costo/ROI: automatiza gran volumen de consultas repetitivas.
+- Escalabilidad: manejo de miles de tickets/día sin infraestructura local.
+- Facilidad de integración: APIs y servicios desacoplados.
+- Calidad de respuesta: lenguaje natural, preciso y consistente con políticas de EcoMarket.
 
-- **Escalabilidad:** La infraestructura en la nube permite gestionar altos volúmenes de consultas sin necesidad de infraestructura local adicional.
+# Fase 2: Fortalezas, Limitaciones y Riesgos Éticos
 
-- **Facilidad de integración:** La API de GPT-4 permite integrarse fácilmente con otros sistemas y canales de atención, facilitando una implementación rápida y efectiva.
+### Fortalezas
+- Reducción del tiempo de respuesta; disponibilidad 24/7; consistencia del tono y políticas.
 
-- **Calidad de respuesta:** GPT-4 puede generar respuestas naturales, precisas y adaptadas al contexto, que son fundamentales para resolver consultas tanto simples como complejas.
+### Limitaciones
+- Casos complejos (20%) requieren criterio humano.
+- Dependencia de la calidad y actualización de datos internos.
+
+### Riesgos éticos y mitigaciones
+- Alucinaciones: responder solo con datos recuperados de la API/BD; usar "no encontrado" cuando aplique.
+- Privacidad de datos: anonimización de PII, cifrado en tránsito y en reposo, control de accesos y retención limitada.
+- Sesgos: revisión periódica de outputs y ajustes; pruebas de equidad.
+- Impacto laboral: protocolo claro de escalamiento y foco de agentes en casos complejos.
+
+# Fase 3: Ingeniería de Prompts
+
+### 1) Prompt de estado de pedido
+Objetivo: consultar el estado usando un número de seguimiento y responder de forma clara y empática con datos del contexto.
+
+Contexto requerido: documento con al menos 10 pedidos (número, cliente, estado, ETA, tracking). Ej.: data/pedidos.json.
+
+Instrucciones sugeridas:
+- Actúa como agente de soporte de EcoMarket.
+- Usa únicamente la información del contexto de pedidos.
+- Confirma el número de seguimiento.
+- Devuelve estado actual y fecha estimada.
+- Si "Enviado", incluye enlace de seguimiento: https://tracking.ecomarket.co/track?id={{tracking_number}}
+- Si hay retraso, ofrece una breve disculpa y explica la causa si existe.
+- Si no existe en el contexto, informa que no se encuentra y solicita verificación.
+
+Consulta ejemplo:
+Hola, quiero saber dónde está mi pedido {{tracking_number}}.
+
+### 2) Prompt de devolución de producto
+
+Política mínima:
+- Retornables: ropa, accesorios y hogar dentro de 30 días, sin usar y con etiquetas.
+- No retornables: higiene personal y perecederos.
+
+Instrucciones sugeridas:
+- Determina si el producto es retornable según la política.
+- Si sí: indica pasos (plazo, estado del producto, etiqueta, canal de envío).
+- Si no: explica con empatía por qué y ofrece alternativa razonable (por ejemplo, descuento futuro).
+
+Solicitud ejemplo:
+Hola, necesito devolver el artículo {{product_name}} del pedido #{{order_number}}.
+
+### Evidencia y datos para pruebas
+- Adjuntar el documento con ≥10 pedidos que el prompt usará como contexto.
+- El repositorio debe incluir el material necesario para ejecutar los prompts según lo indicado en el taller.
 
